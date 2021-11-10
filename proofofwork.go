@@ -39,7 +39,6 @@ func (pow *ProofOfWork) Run() (hash []byte, nonce uint64) {
 	b := pow.block
 
 	for {
-		nonce++
 		tmp := [][]byte{
 			Uint64ToByte(b.Version),
 			b.PrevHash,
@@ -52,12 +51,13 @@ func (pow *ProofOfWork) Run() (hash []byte, nonce uint64) {
 		blockInfo := bytes.Join(tmp, []byte{})
 
 		calcHash = sha256.Sum256(blockInfo)
-		log.Printf("nonce: %d, hash: %x", nonce, calcHash)
 		tmpInt := new(big.Int).SetBytes(calcHash[:])
 		if tmpInt.Cmp(pow.target) == -1 {
+			log.Printf("miner found block, hash: %x, nonce: %d", calcHash, nonce)
 			hash = calcHash[:]
 			break
 		}
+		nonce++
 	}
 
 	return

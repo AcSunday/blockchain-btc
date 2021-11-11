@@ -80,8 +80,7 @@ func (b *Block) Serialize() []byte {
 
 // 反序列化
 func Deserialize(data []byte) *Block {
-	var buffer bytes.Buffer
-	decoder := gob.NewDecoder(bytes.NewReader(buffer.Bytes()))
+	decoder := gob.NewDecoder(bytes.NewReader(data))
 	var block *Block
 	err := decoder.Decode(&block)
 	if err != nil {

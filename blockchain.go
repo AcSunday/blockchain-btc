@@ -8,6 +8,7 @@ import (
 const (
 	blockChainDB     = "blockChain.db"
 	blockChainBucket = "blockBucket"
+	lastHashKey      = "LastHashKey"
 )
 
 // 4. 引入区块链
@@ -28,7 +29,7 @@ func NewBlockChain() *BlockChain {
 	if err != nil {
 		log.Panic("open db failed")
 	}
-	defer db.Close()
+	//defer db.Close()
 
 	// 2. 找到抽屉bucket(如果没有就创建)
 	db.Update(func(tx *bolt.Tx) error {
@@ -41,11 +42,11 @@ func NewBlockChain() *BlockChain {
 
 			// 创建一个创世块，并作为第一个区块添加到区块链中
 			genesisBlock := GenesisBlock()
-			bucket.Put(genesisBlock.Hash, genesisBlock.ToBytes())
-			bucket.Put([]byte("LastHashKey"), genesisBlock.Hash)
+			bucket.Put(genesisBlock.Hash, genesisBlock.Serialize())
+			bucket.Put([]byte(lastHashKey), genesisBlock.Hash)
 		}
 
-		lastHash = bucket.Get([]byte("LastHashKey"))
+		lastHash = bucket.Get([]byte(lastHashKey))
 
 		return nil
 	})
@@ -63,14 +64,23 @@ func GenesisBlock() *Block {
 
 // 6. 添加区块
 func (bc *BlockChain) AddBlock(data string) {
-	/*
 	// 获取最后一个区块的hash
-	lastBlock := bc.blocks[len(bc.blocks)-1]
-	prevHash := lastBlock.Hash
+	db := bc.db
+	lastHash := bc.tail
 
-	// a. 创建新的区块
-	block := NewBlock(data, prevHash)
-	// b. 添加到区块链
-	bc.blocks = append(bc.blocks, block)
-	 */
+	db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(blockChainBucket))
+		if bucket == nil {
+			log.Panic("bucket must be not nil")
+		}
+
+		// a. 创建新的区块
+		block := NewBlock(data, lastHash)
+		// b. 添加到区块链到DB中
+		bucket.Put(block.Hash, block.Serialize())
+		bucket.Put([]byte(lastHashKey), block.Hash)
+		bc.tail = block.Hash
+
+		return nil
+	})
 }

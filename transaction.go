@@ -1,5 +1,12 @@
 package main
 
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/gob"
+	"log"
+)
+
 // 1. 定义交易结构
 // 2. 提供创建交易方法
 // 3. 创建挖矿交易
@@ -18,6 +25,18 @@ type TxInput struct {
 }
 
 type TxOutput struct {
-	value      float64 // 转账金额
+	Amount     float64 // 转账金额
 	PubKeyHash string  // 锁定脚本，我们用地址模拟
+}
+
+func (tx *Transaction) SetHash() {
+	var buffer bytes.Buffer
+	encoder := gob.NewEncoder(&buffer)
+	err := encoder.Encode(tx)
+	if err != nil {
+		log.Panic(err)
+	}
+	data := buffer.Bytes()
+	hash := sha256.Sum256(data)
+	tx.TxID = hash[:]
 }

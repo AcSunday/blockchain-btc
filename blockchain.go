@@ -99,7 +99,23 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 	for {
 		block := it.Next()
 		for _, tx := range block.Transactions {
-			for _, output := range tx.TxOutputs {
+			for i, output := range tx.TxOutputs {
+				// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
+				// 如果相同则跳过
+				if spentOutputs[string(tx.TxID)] != nil {
+					var flag = false
+					for _, idx := range spentOutputs[string(tx.TxID)] {
+						if int64(i) == idx { // 当前准备添加的output已经消耗了，不要加了
+							flag = true
+							break
+						}
+					}
+
+					if flag {
+						continue
+					}
+				}
+
 				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
 				if output.PubKeyHash == addr {
 					UTXOs = append(UTXOs, output)

@@ -88,6 +88,38 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 
 // 找到指定地址的所有的UTXO
 func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
-	var UTXOs []*TxOutput
+	var UTXOs = make([]*TxOutput, 0, 4)
+	var spentOutputs = make(map[string][]int64)
+	// 1. 遍历区块
+	// 2. 遍历交易
+	// 3. 遍历output，找到和自己相关的UTXO(在添加output之前，检查是否已经消耗过)
+	// 4. 遍历input，找到自己花费过的UTXO(把自己消耗过的给标识出来)
+
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+		for _, tx := range block.Transactions {
+			for _, output := range tx.TxOutputs {
+				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
+				if output.PubKeyHash == addr {
+					UTXOs = append(UTXOs, output)
+				}
+			}
+
+			//map[交易id][]int64
+			for _, input := range tx.TxInputs {
+				// 判断一下当前这个input和目标地址是否一致，如果相同说明是消耗过的output 则加进来
+				if input.Sig == addr {
+					indexArray := spentOutputs[string(input.TxID)]
+					indexArray = append(indexArray, input.Index)
+				}
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+
 	return UTXOs
 }

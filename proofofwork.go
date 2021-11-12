@@ -46,7 +46,8 @@ func (pow *ProofOfWork) Run() (hash []byte, nonce uint64) {
 			Uint64ToByte(b.TimeStamp),
 			Uint64ToByte(b.Difficulty),
 			Uint64ToByte(nonce),
-			b.Data,
+			// 只对区块头做hash，区块体通过MerkelRoot产生影响
+			//b.Data,
 		}
 		blockInfo := bytes.Join(tmp, []byte{})
 

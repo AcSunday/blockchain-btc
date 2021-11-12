@@ -20,7 +20,7 @@ type BlockChain struct {
 }
 
 // 5. 定义一个区块链
-func NewBlockChain() *BlockChain {
+func NewBlockChain(addr string) *BlockChain {
 	// 最后一个区块的hash，从DB读出来的
 	var lastHash []byte
 
@@ -41,7 +41,7 @@ func NewBlockChain() *BlockChain {
 			}
 
 			// 创建一个创世块，并作为第一个区块添加到区块链中
-			genesisBlock := GenesisBlock()
+			genesisBlock := GenesisBlock(addr)
 			bucket.Put(genesisBlock.Hash, genesisBlock.Serialize())
 			bucket.Put([]byte(lastHashKey), genesisBlock.Hash)
 		}
@@ -58,12 +58,13 @@ func NewBlockChain() *BlockChain {
 }
 
 // 定义一个创世块
-func GenesisBlock() *Block {
-	return NewBlock("BTC创世块，老牛逼了", []byte{})
+func GenesisBlock(addr string) *Block {
+	coinbase := NewCoinBaseTx(addr, "BTC创世块，老牛逼了")
+	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
 // 6. 添加区块
-func (bc *BlockChain) AddBlock(data string) {
+func (bc *BlockChain) AddBlock(txs []*Transaction) {
 	// 获取最后一个区块的hash
 	db := bc.db
 	lastHash := bc.tail
@@ -75,7 +76,7 @@ func (bc *BlockChain) AddBlock(data string) {
 		}
 
 		// a. 创建新的区块
-		block := NewBlock(data, lastHash)
+		block := NewBlock(txs, lastHash)
 		// b. 添加到区块链到DB中
 		bucket.Put(block.Hash, block.Serialize())
 		bucket.Put([]byte(lastHashKey), block.Hash)

@@ -7,7 +7,7 @@ import (
 )
 
 func (cli *CLI) AddBlock(data string) {
-	cli.bc.AddBlock(data)
+	//cli.bc.AddBlock(data)
 	log.Println("add block to blockchain finished")
 }
 
@@ -25,7 +25,7 @@ func (cli *CLI) PrintBlockChain() {
 		fmt.Printf("当前块难度: %d\n", block.Difficulty)
 		fmt.Printf("当前块随机数: %d\n", block.Nonce)
 		fmt.Printf("当前区块hash值: %x\n", block.Hash)
-		fmt.Printf("区块数据: %s\n", block.Data)
+		fmt.Printf("区块数据: %s\n", block.Transactions[0].TxInputs[0].Sig)
 
 		if len(block.PrevHash) == 0 {
 			break

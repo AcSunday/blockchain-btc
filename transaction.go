@@ -12,6 +12,8 @@ import (
 // 3. 创建挖矿交易
 // 4. 根据交易调整程序
 
+const Reward = 12.5
+
 type Transaction struct {
 	TxID      []byte      // 交易ID
 	TxInputs  []*TxInput  // 交易输入数组
@@ -39,4 +41,31 @@ func (tx *Transaction) SetHash() {
 	data := buffer.Bytes()
 	hash := sha256.Sum256(data)
 	tx.TxID = hash[:]
+}
+
+func NewCoinBaseTx(addr string, data string) *Transaction {
+	// 挖矿交易的特点:
+	// 1. 只有一个input
+	// 2. 无需引用交易id
+	// 3. 无需引用output 的 index
+
+	// 矿工由于挖矿时无需指定签名，所以Sig这个字段可以由矿工自由填写数据，一般是填写矿池的名字
+	input := &TxInput{
+		TxID:  []byte{},
+		Index: -1,
+		Sig:   data,
+	}
+	output := &TxOutput{
+		Amount:     Reward,
+		PubKeyHash: addr,
+	}
+
+	// 对于挖矿交易来说，只有一个input和一个output
+	tx := &Transaction{
+		TxID:      []byte{},
+		TxInputs:  []*TxInput{input},
+		TxOutputs: []*TxOutput{output},
+	}
+	tx.SetHash()
+	return tx
 }

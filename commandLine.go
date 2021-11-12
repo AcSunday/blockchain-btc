@@ -32,3 +32,13 @@ func (cli *CLI) PrintBlockChain() {
 		}
 	}
 }
+
+func (cli *CLI) GetBalance(addr string) {
+	utxos := cli.bc.FindUTXOs(addr)
+
+	amount := 0.0
+	for _, utxo := range utxos {
+		amount += utxo.Amount
+	}
+	log.Printf("%s balance: %f\n", addr, amount)
+}

@@ -9,8 +9,9 @@ import (
 // 用来接收命令行参数并且控制区块链操作
 
 const Usage = `
-    addBlock --data DATA        "add data to blockchain"
-    printChain                  "print all blockchain data"
+    addBlock --data DATA         "add data to blockchain"
+    printChain                   "print all blockchain data"
+    getBalance --address ADDRESS "get address balance"
 `
 
 type CLI struct {
@@ -41,6 +42,14 @@ func (cli *CLI) Run() {
 	case "printChain":
 		// 打印区块
 		cli.PrintBlockChain()
+	case "getBalance":
+		if len(args) == 4 && args[2] == "--address" {
+			addr := args[3]
+			cli.GetBalance(addr)
+		} else {
+			log.Println("missing params")
+			fmt.Printf(Usage)
+		}
 	default:
 		fmt.Printf(Usage)
 	}

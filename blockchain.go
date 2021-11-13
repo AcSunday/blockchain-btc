@@ -122,6 +122,11 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 				}
 			}
 
+			// 如果当前交易是挖矿交易的话，那么不做遍历，直接跳过
+			if tx.IsCoinBase() {
+				continue
+			}
+
 			//map[交易id][]int64
 			for _, input := range tx.TxInputs {
 				// 判断一下当前这个input和目标地址是否一致，如果相同说明是消耗过的output 则加进来

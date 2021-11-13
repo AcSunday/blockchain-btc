@@ -144,3 +144,10 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 
 	return UTXOs
 }
+
+func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]int64, float64) {
+	var utxos map[string][]int64
+	var totalAmount float64
+
+	return utxos, totalAmount
+}

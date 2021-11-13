@@ -31,6 +31,7 @@ type TxOutput struct {
 	PubKeyHash string  // 锁定脚本，我们用地址模拟
 }
 
+// 添加交易的Hash ID（设置Tx的TxID）
 func (tx *Transaction) SetHash() {
 	var buffer bytes.Buffer
 	encoder := gob.NewEncoder(&buffer)
@@ -79,6 +80,56 @@ func NewCoinBaseTx(addr string, data string) *Transaction {
 		TxID:      []byte{},
 		TxInputs:  []*TxInput{input},
 		TxOutputs: []*TxOutput{output},
+	}
+	tx.SetHash()
+	return tx
+}
+
+// 创建普通的转账交易
+//  1. 找到最合理的UTXO集合 map[string][]int64
+//  2. 将这些UTXO逐一转成input
+//  3. 创建outputs
+//  4. 如果有零钱要找零
+func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transaction {
+	utxos, totalAmount := bc.FindNeedUTXOs(from, amount)
+	if totalAmount < amount {
+		log.Printf("Insufficient balance, your: %f, need: %f\n", totalAmount, amount)
+		return nil
+	}
+
+	var inputs = make([]*TxInput, 0, 4)
+	var outputs = make([]*TxOutput, 0, 4)
+
+	// 创建交易输入，并将这些UTXO添加到inputs中
+	for id, indexArray := range utxos {
+		for _, i := range indexArray {
+			input := &TxInput{
+				TxID:  []byte(id),
+				Index: i,
+				Sig:   from,
+			}
+			inputs = append(inputs, input)
+		}
+	}
+
+	// 创建交易输出
+	output := &TxOutput{
+		Amount:     amount,
+		PubKeyHash: to,
+	}
+	outputs = append(outputs, output)
+
+	// 找零
+	if totalAmount > amount {
+		outputs = append(outputs, &TxOutput{
+			Amount:     totalAmount - amount,
+			PubKeyHash: from,
+		})
+	}
+
+	tx := &Transaction{
+		TxInputs:  inputs,
+		TxOutputs: outputs,
 	}
 	tx.SetHash()
 	return tx

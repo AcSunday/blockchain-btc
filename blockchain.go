@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
 )
@@ -88,8 +89,8 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 
 // 找到指定地址的所有的UTXO
 func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
-	var UTXOs = make([]*TxOutput, 0, 4)
-	var spentOutputs = make(map[string][]int64)
+	var utxos = make([]*TxOutput, 0, 4)
+	var spentOutputs = make(map[string]struct{})
 	// 1. 遍历区块
 	// 2. 遍历交易
 	// 3. 遍历output，找到和自己相关的UTXO(在添加output之前，检查是否已经消耗过)
@@ -98,27 +99,19 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 	it := bc.NewIterator()
 	for {
 		block := it.Next()
+
 		for _, tx := range block.Transactions {
 			for i, output := range tx.TxOutputs {
 				// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
 				// 如果相同则跳过
-				if spentOutputs[string(tx.TxID)] != nil {
-					var flag = false
-					for _, idx := range spentOutputs[string(tx.TxID)] {
-						if int64(i) == idx { // 当前准备添加的output已经消耗了，不要加了
-							flag = true
-							break
-						}
-					}
-
-					if flag {
-						continue
-					}
+				key := fmt.Sprintf("%x:%d", tx.TxID, i)
+				if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
+					continue
 				}
 
 				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
 				if output.PubKeyHash == addr {
-					UTXOs = append(UTXOs, output)
+					utxos = append(utxos, output)
 				}
 			}
 
@@ -127,12 +120,12 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 				continue
 			}
 
-			//map[交易id][]int64
+			//map[交易id:索引下标]struct{}
 			for _, input := range tx.TxInputs {
 				// 判断一下当前这个input和目标地址是否一致，如果相同说明是消耗过的output 则加进来
 				if input.Sig == addr {
-					indexArray := spentOutputs[string(input.TxID)]
-					indexArray = append(indexArray, input.Index)
+					key := fmt.Sprintf("%x:%d", input.TxID, input.Index)
+					spentOutputs[key] = struct{}{}
 				}
 			}
 		}
@@ -142,12 +135,55 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 		}
 	}
 
-	return UTXOs
+	return utxos
 }
 
-func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]int64, float64) {
-	var utxos map[string][]int64
+func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]int, float64) {
+	var utxos = make(map[string][]int)
 	var totalAmount float64
+	var spentOutputs = make(map[string]struct{})
+
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+
+		for _, tx := range block.Transactions {
+			for i, output := range tx.TxOutputs {
+				// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
+				key := fmt.Sprintf("%x:%d", tx.TxID, i)
+				if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
+					continue
+				}
+
+				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
+				if output.PubKeyHash == from {
+					if utxos[string(tx.TxID)] == nil {
+						utxos[string(tx.TxID)] = make([]int, 0, 4)
+					}
+					utxos[string(tx.TxID)] = append(utxos[string(tx.TxID)], i)
+					totalAmount += output.Amount
+				}
+			}
+
+			// 如果当前交易是挖矿交易的话，那么不做遍历，直接跳过
+			if tx.IsCoinBase() {
+				continue
+			}
+
+			//map[交易id:索引下标]struct{}
+			for _, input := range tx.TxInputs {
+				// 判断一下当前这个input和目标地址是否一致，如果相同说明是消耗过的output 则加进来
+				if input.Sig == from {
+					key := fmt.Sprintf("%x:%d", input.TxID, input.Index)
+					spentOutputs[key] = struct{}{}
+				}
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
 
 	return utxos, totalAmount
 }

@@ -22,7 +22,7 @@ type Transaction struct {
 
 type TxInput struct {
 	TxID  []byte // 引用的交易ID
-	Index int64  // 引用的output的索引值
+	Index int    // 引用的output的索引值
 	Sig   string // 解锁脚本，我们用地址来模拟
 }
 
@@ -58,6 +58,7 @@ func (tx *Transaction) IsCoinBase() bool {
 	return false
 }
 
+// 创建挖矿奖励的交易
 func NewCoinBaseTx(addr string, data string) *Transaction {
 	// 挖矿交易的特点:
 	// 1. 只有一个input
@@ -77,7 +78,6 @@ func NewCoinBaseTx(addr string, data string) *Transaction {
 
 	// 对于挖矿交易来说，只有一个input和一个output
 	tx := &Transaction{
-		TxID:      []byte{},
 		TxInputs:  []*TxInput{input},
 		TxOutputs: []*TxOutput{output},
 	}
@@ -101,10 +101,10 @@ func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transactio
 	var outputs = make([]*TxOutput, 0, 4)
 
 	// 创建交易输入，并将这些UTXO添加到inputs中
-	for id, indexArray := range utxos {
+	for txID, indexArray := range utxos {
 		for _, i := range indexArray {
 			input := &TxInput{
-				TxID:  []byte(id),
+				TxID:  []byte(txID),
 				Index: i,
 				Sig:   from,
 			}

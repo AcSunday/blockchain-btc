@@ -157,11 +157,17 @@ func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]i
 
 				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
 				if output.PubKeyHash == from {
-					if utxos[string(tx.TxID)] == nil {
-						utxos[string(tx.TxID)] = make([]int, 0, 4)
-					}
+					//if utxos[string(tx.TxID)] == nil {
+					//	utxos[string(tx.TxID)] = make([]int, 0, 4)
+					//}
 					utxos[string(tx.TxID)] = append(utxos[string(tx.TxID)], i)
 					totalAmount += output.Amount
+					log.Println(utxos)
+					log.Println(spentOutputs)
+					log.Println(totalAmount, amount, totalAmount >= amount)
+					//if totalAmount >= amount { // 目前找到的utxo余额足够支付，直接return
+					//	return utxos, totalAmount
+					//}
 				}
 			}
 

@@ -4,14 +4,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 )
 
 // 用来接收命令行参数并且控制区块链操作
 
 const Usage = `
-    addBlock --data DATA         "add data to blockchain"
-    printChain                   "print all blockchain data"
-    getBalance --address ADDRESS "get address balance"
+    addBlock --data DATA            "add data to blockchain"
+    printChain                      "print all blockchain data"
+    getBalance --address ADDRESS    "get address balance"
+    send FROM TO AMOUNT MINER DATA  "send coin to one, the Miner write data"
 `
 
 type CLI struct {
@@ -50,6 +52,19 @@ func (cli *CLI) Run() {
 			log.Println("missing params")
 			fmt.Printf(Usage)
 		}
+	case "send":
+		if len(args) != 7 {
+			log.Println("missing params")
+			fmt.Printf(Usage)
+			return
+		}
+		// send FROM TO AMOUNT MINER DATA
+		from := args[2]
+		to := args[3]
+		amount, _ := strconv.ParseFloat(args[4], 64)
+		miner := args[5]
+		data := args[6]
+		cli.Send(from, to, amount, miner, data)
 	default:
 		fmt.Printf(Usage)
 	}

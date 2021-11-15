@@ -42,3 +42,7 @@ func (cli *CLI) GetBalance(addr string) {
 	}
 	log.Printf("%s balance: %f\n", addr, amount)
 }
+
+func (cli *CLI) Send(from, to string, amount float64, miner, data string) {
+	log.Println(from, to, amount, miner, data)
+}

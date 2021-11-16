@@ -10,8 +10,8 @@ import (
 // 用来接收命令行参数并且控制区块链操作
 
 const Usage = `
-    addBlock --data DATA            "add data to blockchain"
     printChain                      "print all blockchain data"
+    addBlock --data DATA            "add data to blockchain"
     getBalance --address ADDRESS    "get address balance"
     send FROM TO AMOUNT MINER DATA  "send coin to one, the Miner write data"
 `

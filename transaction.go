@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/gob"
 	"log"
+	"time"
 )
 
 // 1. 定义交易结构
@@ -18,6 +19,7 @@ type Transaction struct {
 	TxID      []byte      // 交易ID
 	TxInputs  []*TxInput  // 交易输入数组
 	TxOutputs []*TxOutput // 交易输出数组
+	Timestamp uint64      // 交易产生时间戳
 }
 
 type TxInput struct {
@@ -80,6 +82,7 @@ func NewCoinBaseTx(addr string, data string) *Transaction {
 	tx := &Transaction{
 		TxInputs:  []*TxInput{input},
 		TxOutputs: []*TxOutput{output},
+		Timestamp: uint64(time.Now().Unix()),
 	}
 	tx.SetHash()
 	return tx
@@ -130,6 +133,7 @@ func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transactio
 	tx := &Transaction{
 		TxInputs:  inputs,
 		TxOutputs: outputs,
+		Timestamp: uint64(time.Now().Unix()),
 	}
 	tx.SetHash()
 	return tx

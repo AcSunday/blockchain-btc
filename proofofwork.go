@@ -54,7 +54,7 @@ func (pow *ProofOfWork) Run() (hash []byte, nonce uint64) {
 		calcHash = sha256.Sum256(blockInfo)
 		tmpInt := new(big.Int).SetBytes(calcHash[:])
 		if tmpInt.Cmp(pow.target) == -1 {
-			log.Printf("miner found block, hash: %x, nonce: %d", calcHash, nonce)
+			log.Printf("miner %s found block, hash: %x, nonce: %d", b.Transactions[0].TxOutputs[0].PubKeyHash, calcHash, nonce)
 			hash = calcHash[:]
 			break
 		}

@@ -12,6 +12,7 @@ import (
 const Usage = `
     printChain                      "print all blockchain data"
     newWallet                       "create new a wallet"
+    listAddress                     "query all wallet addresses"
     getBalance --address ADDRESS    "get address balance"
     send FROM TO AMOUNT MINER DATA  "send coin to one, the Miner write data"
 `
@@ -58,6 +59,8 @@ func (cli *CLI) Run() {
 		cli.Send(from, to, amount, miner, data)
 	case "newWallet":
 		cli.NewWallet()
+	case "listAddress":
+		cli.ListAddress()
 	default:
 		fmt.Printf(Usage)
 	}

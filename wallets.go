@@ -68,3 +68,12 @@ func (ws *Wallets) loadWallets() {
 		log.Panic(err)
 	}
 }
+
+// 获取所有的address
+func (ws *Wallets) GetAllAddress() []string {
+	var ret []string
+	for address := range ws.WalletsMap {
+		ret = append(ret, address)
+	}
+	return ret
+}

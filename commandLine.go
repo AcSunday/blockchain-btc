@@ -56,3 +56,12 @@ func (cli *CLI) NewWallet() {
 	address := wallets.CreateWallet()
 	fmt.Printf("your new address: %s\n", address)
 }
+
+func (cli *CLI) ListAddress() {
+	wallets := NewWallets()
+	addresses := wallets.GetAllAddress()
+	fmt.Println("Tips: the order of all list addresses is random!")
+	for i, addr := range addresses {
+		fmt.Printf("wallet[%d]: %s\n", i, addr)
+	}
+}

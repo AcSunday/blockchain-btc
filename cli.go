@@ -11,6 +11,7 @@ import (
 
 const Usage = `
     printChain                      "print all blockchain data"
+    newWallet                       "create new a wallet"
     getBalance --address ADDRESS    "get address balance"
     send FROM TO AMOUNT MINER DATA  "send coin to one, the Miner write data"
 `
@@ -55,6 +56,8 @@ func (cli *CLI) Run() {
 		miner := args[5]
 		data := args[6]
 		cli.Send(from, to, amount, miner, data)
+	case "newWallet":
+		cli.NewWallet()
 	default:
 		fmt.Printf(Usage)
 	}

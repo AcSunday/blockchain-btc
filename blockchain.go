@@ -90,10 +90,67 @@ func (bc *BlockChain) AddBlock(txs []*Transaction) {
 // 找到指定地址的所有的UTXO
 func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 	var utxos = make([]*TxOutput, 0, 4)
-	var spentOutputs = make(map[string]struct{})
+	transactions, spentOutputs := bc.FindUTXOTransactions(addr)
 	// 1. 遍历区块
 	// 2. 遍历交易
 	// 3. 遍历output，找到和自己相关的UTXO(在添加output之前，检查是否已经消耗过)
+	// 4. 遍历input，找到自己花费过的UTXO(把自己消耗过的给标识出来)
+
+	for _, tx := range transactions {
+		for i, output := range tx.TxOutputs {
+			// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
+			// 如果相同则跳过
+			key := fmt.Sprintf("%x:%d", tx.TxID, i)
+			if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
+				continue
+			}
+
+			// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
+			if output.PubKeyHash == addr {
+				utxos = append(utxos, output)
+			}
+		}
+	}
+
+	return utxos
+}
+
+// 找到足够转账额的UTXO
+//  @return map[string][]int 以map[TxID][]int{outputIndex1, outputIndex2 ...}形式返回
+//  @return float64 返回需要的余额或者总余额
+func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]int, float64) {
+	var utxos = make(map[string][]int)
+	var totalAmount float64
+	transactions, spentOutputs := bc.FindUTXOTransactions(from)
+
+	for _, tx := range transactions {
+		for i, output := range tx.TxOutputs {
+			// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
+			key := fmt.Sprintf("%x:%d", tx.TxID, i)
+			if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
+				continue
+			}
+
+			// 这个output和我们的目标地址相同，加到返回的utxos map中
+			if output.PubKeyHash == from {
+				utxos[string(tx.TxID)] = append(utxos[string(tx.TxID)], i)
+				totalAmount += output.Amount
+				if totalAmount >= amount { // 目前找到的utxo余额足够支付，直接return
+					return utxos, totalAmount
+				}
+			}
+		}
+	}
+
+	return utxos, totalAmount
+}
+
+func (bc *BlockChain) FindUTXOTransactions(addr string) ([]*Transaction, map[string]struct{}) {
+	var txs = make([]*Transaction, 0, 8)
+	var spentOutputs = make(map[string]struct{})
+	// 1. 遍历区块
+	// 2. 遍历交易
+	// 3. 遍历output，找到和自己相关的UTXO
 	// 4. 遍历input，找到自己花费过的UTXO(把自己消耗过的给标识出来)
 
 	it := bc.NewIterator()
@@ -101,17 +158,11 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 		block := it.Next()
 
 		for _, tx := range block.Transactions {
-			for i, output := range tx.TxOutputs {
-				// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
-				// 如果相同则跳过
-				key := fmt.Sprintf("%x:%d", tx.TxID, i)
-				if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
-					continue
-				}
-
-				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
+			for _, output := range tx.TxOutputs {
+				// 这个output和我们的目标地址相同，加到返回的txs切片中
 				if output.PubKeyHash == addr {
-					utxos = append(utxos, output)
+					txs = append(txs, tx)
+					break
 				}
 			}
 
@@ -135,57 +186,5 @@ func (bc *BlockChain) FindUTXOs(addr string) []*TxOutput {
 		}
 	}
 
-	return utxos
-}
-
-// 找到足够转账额的UTXO
-//  以map[TxID][]int{outputIndex1, outputIndex2}形式返回
-func (bc *BlockChain) FindNeedUTXOs(from string, amount float64) (map[string][]int, float64) {
-	var utxos = make(map[string][]int)
-	var totalAmount float64
-	var spentOutputs = make(map[string]struct{})
-
-	it := bc.NewIterator()
-	for {
-		block := it.Next()
-
-		for _, tx := range block.Transactions {
-			for i, output := range tx.TxOutputs {
-				// 在这里做一个过滤，将所有消耗过的output和当前即将要添加的output对比一下
-				key := fmt.Sprintf("%x:%d", tx.TxID, i)
-				if _, ok := spentOutputs[key]; ok { // 当前准备添加的output已经消耗了，不要加了
-					continue
-				}
-
-				// 这个output和我们的目标地址相同，加到返回的UTXOs切片中
-				if output.PubKeyHash == from {
-					utxos[string(tx.TxID)] = append(utxos[string(tx.TxID)], i)
-					totalAmount += output.Amount
-					if totalAmount >= amount { // 目前找到的utxo余额足够支付，直接return
-						return utxos, totalAmount
-					}
-				}
-			}
-
-			// 如果当前交易是挖矿交易的话，那么不做遍历，直接跳过
-			if tx.IsCoinBase() {
-				continue
-			}
-
-			//map[交易id:索引下标]struct{}
-			for _, input := range tx.TxInputs {
-				// 判断一下当前这个input和目标地址是否一致，如果相同说明是消耗过的output 则加进来
-				if input.Sig == from {
-					key := fmt.Sprintf("%x:%d", input.TxID, input.Index)
-					spentOutputs[key] = struct{}{}
-				}
-			}
-		}
-
-		if len(block.PrevHash) == 0 {
-			break
-		}
-	}
-
-	return utxos, totalAmount
+	return txs, spentOutputs
 }

@@ -11,7 +11,6 @@ import (
 
 const Usage = `
     printChain                      "print all blockchain data"
-    addBlock --data DATA            "add data to blockchain"
     getBalance --address ADDRESS    "get address balance"
     send FROM TO AMOUNT MINER DATA  "send coin to one, the Miner write data"
 `
@@ -32,15 +31,6 @@ func (cli *CLI) Run() {
 	// 3. 执行相应动作
 	cmd := args[1]
 	switch cmd {
-	case "addBlock":
-		// 添加区块
-		if len(args) == 4 && args[2] == "--data" {
-			data := args[3]
-			cli.AddBlock(data)
-		} else {
-			log.Println("missing params")
-			fmt.Printf(Usage)
-		}
 	case "printChain":
 		// 打印区块
 		cli.PrintBlockChain()

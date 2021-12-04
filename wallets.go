@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/elliptic"
 	"encoding/gob"
+	"github.com/btcsuite/btcutil/base58"
 	"io/ioutil"
 	"log"
 	"os"
@@ -76,4 +77,14 @@ func (ws *Wallets) GetAllAddress() []string {
 		ret = append(ret, address)
 	}
 	return ret
+}
+
+// 通过地址返回公钥的hash
+func GetPubKeyFromAddress(addr string) []byte {
+	// 1. 解码
+	addrByte := base58.Decode(addr) // 25字节
+	// 2. 截取出公钥hash：取出version（1字节），取出校验码（4字节）
+	pubKeyHash := addrByte[1 : len(addrByte)-4]
+
+	return pubKeyHash
 }

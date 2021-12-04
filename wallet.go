@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -41,9 +42,13 @@ func (w *Wallet) NewAddress() string {
 
 	rip160HashValue := HashPubKey(pubKey)
 
+	return PubKeyHashToAddr(rip160HashValue)
+}
+
+func PubKeyHashToAddr(pubKeyHash []byte) string {
 	// 拼接version
 	version := byte(00)
-	payload := append([]byte{version}, rip160HashValue...)
+	payload := append([]byte{version}, pubKeyHash...)
 
 	// checksum
 	checkCode := CheckSum(payload)
@@ -53,7 +58,6 @@ func (w *Wallet) NewAddress() string {
 
 	// go语言有一个库，叫做btcd，这个是go语言实现的BTC全节点源码
 	address := base58.Encode(payload)
-
 	return address
 }
 
@@ -77,4 +81,22 @@ func CheckSum(data []byte) []byte {
 	hash2 := sha256.Sum256(hash1[:])
 	checkCode := hash2[:4] // 前4字节校验码
 	return checkCode
+}
+
+func IsValidAddress(addr string) bool {
+	// 1. 解码
+	addrByte := base58.Decode(addr) // 25字节
+	if len(addrByte) < 24 {
+		return false
+	}
+
+	// 2. 取数据
+	payload := addrByte[:len(addrByte)-4]
+	checksum1 := addrByte[len(addrByte)-4:]
+
+	// 3. 做checksum函数
+	checksum2 := CheckSum(payload)
+
+	// 4. 比较
+	return bytes.Equal(checksum1, checksum2)
 }

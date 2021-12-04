@@ -21,7 +21,7 @@ func (cli *CLI) PrintBlockChain() {
 		fmt.Printf("块难度: %d\n", block.Difficulty)
 		fmt.Printf("随机数: %d\n", block.Nonce)
 		fmt.Printf("当前区块hash值: %x\n", block.Hash)
-		fmt.Printf("当前区块数据: %s\n", block.Transactions[0].TxInputs[0].Sig)
+		fmt.Printf("当前区块数据: %s\n", block.Transactions[0].TxInputs[0].PubKey)
 
 		if len(block.PrevHash) == 0 {
 			break
@@ -30,7 +30,15 @@ func (cli *CLI) PrintBlockChain() {
 }
 
 func (cli *CLI) GetBalance(addr string) {
-	utxos := cli.bc.FindUTXOs(addr)
+	// 1. 校验地址
+	if !IsValidAddress(addr) {
+		log.Printf("address %s is invalid\n", addr)
+		return
+	}
+
+	// 2. 生成公钥hash
+	pubKeyHash := GetPubKeyFromAddress(addr)
+	utxos := cli.bc.FindUTXOs(pubKeyHash)
 
 	amount := 0.0
 	for _, utxo := range utxos {

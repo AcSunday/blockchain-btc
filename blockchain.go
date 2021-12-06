@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"log"
@@ -188,4 +190,47 @@ func (bc *BlockChain) FindUTXOTransactions(pubKeyHash []byte) ([]*Transaction, m
 	}
 
 	return txs, spentOutputs
+}
+
+// 根据id查找交易本身，需要遍历整个区块链
+func (bc *BlockChain) FindTransactionByTxid(txID []byte) (*Transaction, error) {
+	// 1. 遍历区块链
+	// 2. 遍历交易
+	// 3. 比较交易，找到了直接退出
+	// 4. 如果没找到，返回空Transaction，同时返回错误状态
+
+	it := bc.NewIterator()
+	for {
+		block := it.Next()
+
+		for _, tx := range block.Transactions {
+			if bytes.Equal(tx.TxID, txID) {
+				return tx, nil
+			}
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+
+	return nil, errors.New("invalid txid, not found tx")
+}
+
+// 签名交易
+func (bc *BlockChain) SignTransaction(tx *Transaction, privateKey *ecdsa.PrivateKey) {
+	prevTxs := make(map[string]*Transaction)
+	// 找到所有引用的交易
+	// 1. 根据inputs来找，有多少input就遍历多少次
+	// 2. 找到目标交易
+	// 3. 添加到prevTxs里面
+	for _, input := range tx.TxInputs {
+		// 根据id查找交易本身，需要遍历整个区块链
+		tx, err := bc.FindTransactionByTxid(input.TxID)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTxs[string(input.TxID)] = tx
+	}
+	tx.Sign(privateKey, prevTxs)
 }

@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"log"
@@ -149,7 +151,7 @@ func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transactio
 		return nil
 	}
 	pubKey := wallet.PubKey
-	//privateKey := wallet.Private
+	privateKey := wallet.Private
 
 	// 传递公钥的hash，而不是传递地址
 	pubKeyHash := HashPubKey(pubKey)
@@ -196,5 +198,65 @@ func NewTransaction(from, to string, amount float64, bc *BlockChain) *Transactio
 		Timestamp: uint64(time.Now().Unix()),
 	}
 	tx.SetHash()
+
+	// 签名，交易创建的最后进行签名
+	bc.SignTransaction(tx, privateKey)
+
 	return tx
+}
+
+// 签名的具体实现，参数为：私钥、inputs里面所有引用的交易结构map[string]Transaction
+func (tx *Transaction) Sign(privateKey *ecdsa.PrivateKey, prevTxs map[string]*Transaction) {
+	// 1. 创建一个当前交易的txCopy，使用函数：TrimmedCopy()，要把Signature和PubKey字段设为nil
+	txCopy := tx.TrimmedCopy()
+	// 2. 循环遍历txCopy的inputs，得到input所引用的output公钥hash
+	for i, input := range txCopy.TxInputs {
+		prevTx, ok := prevTxs[string(input.TxID)]
+		if !ok {
+			log.Panic("invalid tx")
+		}
+		txCopy.TxInputs[i].PubKey = prevTx.TxOutputs[input.Index].PubKeyHash
+
+		// 3. 生成要签名的数据，要签名的数据一定是hash值
+		// 3.1 我们对每一个input都要签名一次，签名的数据是由当前input引用的output的hash+当前的outputs（都承载在当前这个txCopy里面）
+		// 3.2 要对这个拼好的txCopy进行hash处理，SetHash得到TxID，这个TxID就是我们要签名的最终数据
+		txCopy.SetHash()
+		txCopy.TxInputs[i].PubKey = nil
+		signDataHash := txCopy.TxID
+
+		// 4. 执行签名动作得到r，s字节流
+		r, s, err := ecdsa.Sign(rand.Reader, privateKey, signDataHash)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		// 5. 放到我们所签名的input的Signature中
+		signature := append(r.Bytes(), s.Bytes()...)
+		tx.TxInputs[i].Signature = signature
+	}
+}
+
+func (tx *Transaction) TrimmedCopy() *Transaction {
+	var inputs []*TxInput
+	var outputs []*TxOutput
+	for _, input := range tx.TxInputs {
+		inputs = append(inputs, &TxInput{
+			TxID:      input.TxID,
+			Index:     input.Index,
+			Signature: nil,
+			PubKey:    nil,
+		})
+	}
+	for _, output := range tx.TxOutputs {
+		outputs = append(outputs, &TxOutput{
+			Amount:     output.Amount,
+			PubKeyHash: output.PubKeyHash,
+		})
+	}
+	return &Transaction{
+		TxID:      tx.TxID,
+		TxInputs:  inputs,
+		TxOutputs: outputs,
+		Timestamp: tx.Timestamp,
+	}
 }

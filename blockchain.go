@@ -69,6 +69,14 @@ func GenesisBlock(addr string) *Block {
 
 // 6. 添加区块
 func (bc *BlockChain) AddBlock(txs []*Transaction) {
+
+	for _, tx := range txs {
+		if !bc.VerifyTransaction(tx) {
+			log.Println("miner verify tx failed")
+			return
+		}
+	}
+
 	// 获取最后一个区块的hash
 	db := bc.db
 	lastHash := bc.tail
@@ -233,4 +241,27 @@ func (bc *BlockChain) SignTransaction(tx *Transaction, privateKey *ecdsa.Private
 		prevTxs[string(input.TxID)] = tx
 	}
 	tx.Sign(privateKey, prevTxs)
+}
+
+func (bc *BlockChain) VerifyTransaction(tx *Transaction) bool {
+
+	if tx.IsCoinBase() {
+		return true
+	}
+
+	prevTxs := make(map[string]*Transaction)
+	// 找到所有引用的交易
+	// 1. 根据inputs来找，有多少input就遍历多少次
+	// 2. 找到目标交易
+	// 3. 添加到prevTxs里面
+	for _, input := range tx.TxInputs {
+		// 根据id查找交易本身，需要遍历整个区块链
+		tx, err := bc.FindTransactionByTxid(input.TxID)
+		if err != nil {
+			log.Panic(err)
+		}
+		prevTxs[string(input.TxID)] = tx
+	}
+
+	return tx.Verify(prevTxs)
 }

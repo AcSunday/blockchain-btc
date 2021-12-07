@@ -29,6 +29,23 @@ func (cli *CLI) PrintBlockChain() {
 	}
 }
 
+func (cli *CLI) PrintTransactions() {
+	bc := cli.bc
+	iterator := bc.NewIterator()
+	for {
+		// 返回区块，游标左移
+		block := iterator.Next()
+		for _, tx := range block.Transactions {
+			txStr := tx.String()
+			fmt.Println(txStr)
+		}
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
+}
+
 func (cli *CLI) GetBalance(addr string) {
 	// 1. 校验地址
 	if !IsValidAddress(addr) {

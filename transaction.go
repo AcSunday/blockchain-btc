@@ -7,8 +7,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
+	"fmt"
 	"log"
 	"math/big"
+	"strings"
 	"time"
 )
 
@@ -317,4 +319,25 @@ func (tx *Transaction) Verify(prevTxs map[string]*Transaction) bool {
 	}
 
 	return true
+}
+
+func (tx *Transaction) String() string {
+	var lines = make([]string, 0, 16)
+	lines = append(lines, fmt.Sprintf("--- Transaction %x", tx.TxID))
+
+	for i, input := range tx.TxInputs {
+		lines = append(lines, fmt.Sprintf("    Input: %d", i))
+		lines = append(lines, fmt.Sprintf("      TxID: %x", input.TxID))
+		lines = append(lines, fmt.Sprintf("      Index: %d", input.Index))
+		lines = append(lines, fmt.Sprintf("      Signature: %x", input.Signature))
+		lines = append(lines, fmt.Sprintf("      PubKey: %x", input.PubKey))
+	}
+
+	for i, output := range tx.TxOutputs {
+		lines = append(lines, fmt.Sprintf("    Output: %d", i))
+		lines = append(lines, fmt.Sprintf("      Amount: %f", output.Amount))
+		lines = append(lines, fmt.Sprintf("      PubKeyHash: %x", output.PubKeyHash))
+	}
+
+	return strings.Join(lines, "\n")
 }

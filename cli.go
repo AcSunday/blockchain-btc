@@ -11,6 +11,7 @@ import (
 
 const Usage = `
     printChain                      "print all blockchain data"
+    printTxs                        "print all Transactions"
     newWallet                       "create new a wallet"
     listAddress                     "query all wallet addresses"
     getBalance --address ADDRESS    "get address balance"
@@ -36,6 +37,8 @@ func (cli *CLI) Run() {
 	case "printChain":
 		// 打印区块
 		cli.PrintBlockChain()
+	case "printTxs":
+		cli.PrintTransactions()
 	case "getBalance":
 		if len(args) == 4 && args[2] == "--address" {
 			addr := args[3]
